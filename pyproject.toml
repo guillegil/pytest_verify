@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pytest-verify"
+version = "0.1.0"
+description = "A pytest plugin providing soft assertions for test verification"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+dependencies = ["pytest>=7.0"]
+
+[project.entry-points.pytest11]
+verify = "pytest_verify._fixture"
+
+[tool.setuptools.packages.find]
+include = ["pytest_verify*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
