@@ -146,7 +146,11 @@ _reporter_installed: bool = False
 
 def pytest_configure(config: pytest.Config) -> None:
     global _reporter_installed
-    _reporter_installed = config.pluginmanager.has_plugin("pytest-reporter")
+    _reporter_installed = (
+        config.pluginmanager.has_plugin("pytest_reporter")
+        or config.pluginmanager.has_plugin("reporter")
+        or config.pluginmanager.has_plugin("pytest-reporter")
+    )
 
 
 @pytest.hookimpl(hookwrapper=True)
