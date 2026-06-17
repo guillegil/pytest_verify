@@ -15,10 +15,26 @@ Usage as a **module** (secondary API)::
 """
 from __future__ import annotations
 
+import pytest
+
 from ._descriptors import CheckDescriptor
+from ._stash import check_results_key
 from ._verify import Verify
 
-__all__ = ["CheckDescriptor", "Verify", "verify"]
+__all__ = ["CheckDescriptor", "Verify", "get_check_results", "verify"]
 
 #: Module-level ``Verify`` instance.  Returns unevaluated descriptors.
 verify: Verify = Verify()
+
+
+def get_check_results(item: pytest.Item) -> list[CheckDescriptor]:
+    """Return verification check descriptors recorded for this test item.
+
+    Args:
+        item: The pytest test item whose check results to retrieve.
+
+    Returns:
+        A new list (copy) of every ``CheckDescriptor`` recorded for *item*
+        during its execution.  Returns ``[]`` if no checks were recorded.
+    """
+    return list(item.stash.get(check_results_key, []))

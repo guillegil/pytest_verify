@@ -151,28 +151,26 @@ class TestFixtureAllCheckMethods:
         assert evaluate(result) is False
 
 
-class TestReporterDetection:
-    """Test stash writes conditional on reporter presence."""
+class TestUnconditionalStashWrite:
+    """Test stash writes are unconditional — reporter presence does not matter."""
 
-    def test_stash_not_written_without_reporter(self, pytester):
+    def test_stash_written_without_reporter(self, pytester):
+        """Stash is always populated regardless of whether reporter is installed."""
         pytester.makepyfile("""
             from pytest_verify._stash import check_results_key
 
-            def test_no_stash(request, verify):
+            def test_stash_present(request, verify):
                 verify.equal(1, 1, name="X")
-                assert check_results_key not in request.node.stash
+                results = request.node.stash.get(check_results_key, None)
+                assert results is not None, "stash not written"
+                assert len(results) == 1
+                assert results[0]["passed"] is True
         """)
-        result = pytester.runpytest()
+        result = pytester.runpytest("-p", "no:pytest_reporter")
         result.assert_outcomes(passed=1)
 
     def test_stash_written_with_reporter(self, pytester):
-        # Simulate reporter being installed by registering a fake plugin
-        pytester.makeconftest("""
-            def pytest_configure(config):
-                class FakeReporter:
-                    pass
-                config.pluginmanager.register(FakeReporter(), name="pytest-reporter")
-        """)
+        """Stash is populated when reporter is installed (unchanged behavior)."""
         pytester.makepyfile("""
             from pytest_verify._stash import check_results_key
 

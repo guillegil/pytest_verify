@@ -18,9 +18,8 @@ _verify_key: pytest.StashKey[_FixtureVerify] = pytest.StashKey()
 class _FixtureVerify(Verify):
     """Fixture-scoped verify that evaluates checks immediately and collects results."""
 
-    def __init__(self, item: pytest.Item, reporter_installed: bool) -> None:
+    def __init__(self, item: pytest.Item) -> None:
         self._item = item
-        self._reporter_installed = reporter_installed
         self._results: list[CheckDescriptor] = []
 
     # ------------------------------------------------------------------
@@ -28,12 +27,10 @@ class _FixtureVerify(Verify):
     # ------------------------------------------------------------------
 
     def _record(self, descriptor: CheckDescriptor) -> CheckDescriptor:
-        """Evaluate, store, optionally stash, and return the descriptor."""
+        """Evaluate, store, stash, and return the descriptor."""
         descriptor["passed"] = _evaluate_single(descriptor)
         self._results.append(descriptor)
-        if self._reporter_installed:
-            stash_list = self._item.stash.setdefault(check_results_key, [])
-            stash_list.append(descriptor)
+        self._item.stash.setdefault(check_results_key, []).append(descriptor)
         return descriptor
 
     def equal(self, actual: Any, expected: Any, *, name: str, units: str | None = None) -> CheckDescriptor:
@@ -110,9 +107,7 @@ class _FixtureVerify(Verify):
         # Evaluate using the real type object (more reliable than name comparison)
         descriptor["passed"] = isinstance(actual, expected_type)
         self._results.append(descriptor)
-        if self._reporter_installed:
-            stash_list = self._item.stash.setdefault(check_results_key, [])
-            stash_list.append(descriptor)
+        self._item.stash.setdefault(check_results_key, []).append(descriptor)
         return descriptor
 
     def length(self, actual: Any, expected: int, *, name: str) -> CheckDescriptor:
@@ -141,17 +136,6 @@ class _FixtureVerify(Verify):
 # Plugin hooks
 # ======================================================================
 
-_reporter_installed: bool = False
-
-
-def pytest_configure(config: pytest.Config) -> None:
-    global _reporter_installed
-    _reporter_installed = (
-        config.pluginmanager.has_plugin("pytest_reporter")
-        or config.pluginmanager.has_plugin("reporter")
-        or config.pluginmanager.has_plugin("pytest-reporter")
-    )
-
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(
@@ -171,6 +155,6 @@ def pytest_runtest_makereport(
 def verify(request: pytest.FixtureRequest) -> _FixtureVerify:
     """Soft-assertion fixture that collects checks and fails at teardown."""
     item: pytest.Item = request.node  # type: ignore[assignment]
-    fv = _FixtureVerify(item, _reporter_installed)
+    fv = _FixtureVerify(item)
     item.stash[_verify_key] = fv
     return fv
