@@ -50,6 +50,15 @@ def _units_suffix(units: str | None) -> str:
     return units if units else ""
 
 
+def _format_percent(rel_tol: float) -> str:
+    """Render a relative tolerance as a percent string, dropping a trailing ``.0``.
+
+    ``0.01`` -> ``"1"``, ``0.015`` -> ``"1.5"``. The ``g`` format also rounds away
+    IEEE 754 artifacts from the ``* 100`` (e.g. ``0.007 * 100`` -> ``"0.7"``).
+    """
+    return f"{rel_tol * 100:.10g}"
+
+
 def build_equal(actual: Any, expected: Any, *, name: str, units: str | None = None) -> CheckDescriptor:
     u = _units_suffix(units)
     desc: CheckDescriptor = {
@@ -88,12 +97,14 @@ def build_approx(
     if abs_tol is None and rel_tol is None:
         raise ValueError("approx requires at least one of abs_tol or rel_tol")
     u = _units_suffix(units)
-    tol_parts: list[str] = []
-    if abs_tol is not None:
-        tol_parts.append(f"\u00b1 {abs_tol}{u}")
-    if rel_tol is not None:
-        tol_parts.append(f"\u00b1 {rel_tol * 100}%")
-    tol_str = " ".join(tol_parts)
+    # The (abs)/(rel) labels disambiguate only when both tolerances are present;
+    # with a single tolerance the bare "\u00b1 value" is unambiguous (spec \u00a75.1).
+    if abs_tol is not None and rel_tol is not None:
+        tol_str = f"\u00b1 {abs_tol}{u} (abs) \u00b1 {_format_percent(rel_tol)}% (rel)"
+    elif abs_tol is not None:
+        tol_str = f"\u00b1 {abs_tol}{u}"
+    else:
+        tol_str = f"\u00b1 {_format_percent(rel_tol)}%"
     desc: CheckDescriptor = {
         "check_type": "approx",
         "name": name,
@@ -275,7 +286,7 @@ def build_length(actual: Any, expected: int, *, name: str) -> CheckDescriptor:
     desc: CheckDescriptor = {
         "check_type": "length",
         "name": name,
-        "description": f"Verify len('{name}') == {expected}",
+        "description": f"Verify '{name}' has length {expected}",
         "actual": actual,
         "expected": expected,
         "actual_length": len(actual),
@@ -293,7 +304,7 @@ def build_all_satisfy(
     desc: CheckDescriptor = {
         "check_type": "all_satisfy",
         "name": name,
-        "description": f"Verify all items in '{name}' satisfy condition",
+        "description": f"Verify all items in '{name}' satisfy condition ({len(child_checks)} items)",
         "child_checks": child_checks,
     }
     return desc

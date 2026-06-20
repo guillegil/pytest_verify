@@ -120,7 +120,7 @@ class TestSoftAssertFailureBehaviorUnchanged:
         """)
         result = pytester.runpytest()
         result.assert_outcomes(failed=1)
-        result.stdout.fnmatch_lines(["*FAILED checks*"])
+        result.stdout.fnmatch_lines(["*checks failed*"])
 
     def test_longrepr_contains_checks_failed_error(self, pytester):
         pytester.makepyfile("""
@@ -130,7 +130,7 @@ class TestSoftAssertFailureBehaviorUnchanged:
         result = pytester.runpytest("-v")
         result.assert_outcomes(failed=1)
         # ChecksFailedError message should appear in the output
-        result.stdout.fnmatch_lines(["*FAILED checks*"])
+        result.stdout.fnmatch_lines(["*checks failed*"])
 
     def test_mixed_checks_all_stashed(self, pytester):
         """All checks (pass AND fail) are recorded in stash."""

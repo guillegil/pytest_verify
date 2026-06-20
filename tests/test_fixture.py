@@ -46,7 +46,7 @@ class TestFixtureTeardown:
         """)
         result = pytester.runpytest()
         result.assert_outcomes(failed=1)
-        result.stdout.fnmatch_lines(["*FAILED checks:*"])
+        result.stdout.fnmatch_lines(["*checks failed*"])
 
     def test_error_message_format(self, pytester):
         pytester.makepyfile("""
@@ -58,12 +58,25 @@ class TestFixtureTeardown:
         result = pytester.runpytest("-v")
         result.assert_outcomes(failed=1)
         result.stdout.fnmatch_lines([
-            "*FAILED checks:*",
+            "*1 of 3 checks failed*",
             "*[1]*Fail1*",
-            "*PASSED checks:*",
             "*[0]*Pass1*",
             "*[2]*Pass2*",
         ])
+
+    def test_hard_failure_still_surfaces_soft_checks(self, pytester):
+        """When the test body raises a hard error AND soft checks failed, both
+        the original traceback and the soft-assert summary must be reported —
+        the soft failures must not be silently dropped."""
+        pytester.makepyfile("""
+            def test_hard_and_soft(verify):
+                verify.equal(1, 2, name="SoftBad")
+                raise RuntimeError("hard boom")
+        """)
+        result = pytester.runpytest()
+        result.assert_outcomes(failed=1)
+        result.stdout.fnmatch_lines(["*RuntimeError*hard boom*"])
+        result.stdout.fnmatch_lines(["*checks failed*", "*SoftBad*"])
 
     def test_no_state_bleed_between_tests(self, pytester):
         pytester.makepyfile("""

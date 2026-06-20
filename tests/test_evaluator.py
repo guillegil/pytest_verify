@@ -211,6 +211,28 @@ class TestIsInstanceEval:
     def test_fail(self):
         assert evaluate(build_is_instance([], dict, name="Data")) is False
 
+    def test_concrete_subclass_passes(self):
+        # bool is a subclass of int — isinstance(True, int) is True.
+        assert evaluate(build_is_instance(True, int, name="Flag")) is True
+
+    def test_exact_type_passes(self):
+        assert evaluate(build_is_instance(True, bool, name="Flag")) is True
+
+    def test_unrelated_type_fails(self):
+        assert evaluate(build_is_instance(5, str, name="Value")) is False
+
+    def test_superclass_instance_does_not_match_subclass(self):
+        # An int is not a bool, even though bool subclasses int.
+        assert evaluate(build_is_instance(1, bool, name="Value")) is False
+
+    def test_abc_virtual_subclass_is_a_known_module_path_limit(self):
+        # Documented limit: name-based MRO matching cannot see ABC virtual
+        # subclasses (list is not in Sequence.__mro__ by name). The *fixture*
+        # path uses real isinstance and is unaffected; this pins the divergence.
+        from collections.abc import Sequence
+
+        assert evaluate(build_is_instance([1, 2, 3], Sequence, name="S")) is False
+
 
 class TestLengthEval:
     def test_pass(self):

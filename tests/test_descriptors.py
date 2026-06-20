@@ -79,12 +79,17 @@ class TestBuildApprox:
 
     def test_description_rel_tol(self):
         d = build_approx(100, 100, rel_tol=0.01, name="T")
-        assert "\u00b1 1.0%" in d["description"]
+        assert d["description"] == "Verify 'T' == 100 \u00b1 1%"
 
     def test_description_both_tol(self):
         d = build_approx(5, 5, abs_tol=0.1, rel_tol=0.02, name="X", units="A")
-        assert "\u00b1 0.1A" in d["description"]
-        assert "\u00b1 2.0%" in d["description"]
+        assert d["description"] == "Verify 'X' == 5A \u00b1 0.1A (abs) \u00b1 2% (rel)"
+
+    def test_description_non_round_rel_tol_has_no_float_noise(self):
+        # 0.007 * 100 == 0.7000000000000001 in IEEE 754; the rendered percent
+        # must not leak that artifact.
+        d = build_approx(100, 100, rel_tol=0.007, name="T")
+        assert d["description"] == "Verify 'T' == 100 \u00b1 0.7%"
 
     def test_fields(self):
         d = build_approx(3.28, 3.3, abs_tol=0.05, name="V")
@@ -261,7 +266,7 @@ class TestBuildLength:
 
     def test_description(self):
         d = build_length("abc", 3, name="Str")
-        assert d["description"] == "Verify len('Str') == 3"
+        assert d["description"] == "Verify 'Str' has length 3"
 
 
 class TestBuildAllSatisfy:
@@ -286,6 +291,11 @@ class TestBuildAllSatisfy:
         factory = lambda x: build_greater(x, 0, name="X")
         d = build_all_satisfy([], factory, name="Empty")
         assert d["child_checks"] == []
+
+    def test_description_includes_item_count(self):
+        factory = lambda x: build_greater(x, 0, name=f"item_{x}")
+        d = build_all_satisfy([1, 2, 3, 4], factory, name="All channels within spec")
+        assert d["description"] == "Verify all items in 'All channels within spec' satisfy condition (4 items)"
 
 
 class TestBuildConditional:

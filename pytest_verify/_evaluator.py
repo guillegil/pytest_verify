@@ -71,14 +71,15 @@ def _evaluate_single(descriptor: CheckDescriptor) -> bool:
         return re.search(descriptor["pattern"], descriptor["actual"]) is not None
 
     if check_type == "is_instance":
-        # The actual type object isn't stored in the descriptor (only the name).
-        # For module-level evaluate we look at descriptor["actual"] against the
-        # stored name.  However the *fixture* path evaluates before the type is
-        # lost, so the fixture sets ``passed`` directly.  For the generic path,
-        # we fall back to checking the type name.
+        # The descriptor only stores the expected type's NAME (JSON-serializable),
+        # not the type object — so we can't call isinstance() here. But the live
+        # ``actual`` object is available, so we match the name against every class
+        # in its MRO. This honours concrete subclasses (e.g. isinstance(True, int)).
+        # The fixture path uses real isinstance() and so additionally handles ABC
+        # virtual subclasses, which name-based MRO matching cannot resolve.
         actual = descriptor["actual"]
         expected_name = descriptor["expected_type"]
-        return type(actual).__name__ == expected_name
+        return any(klass.__name__ == expected_name for klass in type(actual).__mro__)
 
     if check_type == "length":
         return descriptor["actual_length"] == descriptor["expected"]

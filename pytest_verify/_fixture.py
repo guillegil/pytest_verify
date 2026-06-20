@@ -144,11 +144,21 @@ def pytest_runtest_makereport(
     """After the call phase, check for soft-assertion failures and convert to FAILED."""
     outcome = yield
     report = outcome.get_result()
-    if report.when == "call" and report.passed:
-        fv = item.stash.get(_verify_key, None)
-        if fv is not None and any(not r.get("passed") for r in fv._results):
-            report.outcome = "failed"
-            report.longrepr = str(ChecksFailedError(fv._results))
+    if report.when != "call":
+        return
+    fv = item.stash.get(_verify_key, None)
+    if fv is None or not any(not r.get("passed") for r in fv._results):
+        return
+    checks_summary = str(ChecksFailedError(fv._results))
+    if report.passed:
+        # The test body itself passed; the failed soft checks make the verdict FAILED.
+        report.outcome = "failed"
+        report.longrepr = checks_summary
+    else:
+        # The test body already failed hard (exception/assert). Preserve the original
+        # traceback and surface the soft-assert failures alongside it as an extra
+        # section, instead of dropping them.
+        report.sections.append(("Soft assertion failures", checks_summary))
 
 
 @pytest.fixture()
