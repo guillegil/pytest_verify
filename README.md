@@ -25,6 +25,21 @@ def test_power_supply(verify):
 If any check fails, the test continues running. At the end, all failures are
 reported together in a single `ChecksFailedError`.
 
+## Failure Output
+
+When one or more checks fail, the test is reported as **failed** with a summary
+listing the failed checks (`✗`) before the passed ones (`✓`), each with its index,
+name, and an `expected … got …` detail:
+
+```text
+1 of 3 checks failed
+
+  ✗ [1] Vout — expected 3.3V ± 0.05V, got 3.8V
+
+  ✓ [0] PSU stable — True
+  ✓ [2] Throughput — 120Mbps > 100Mbps
+```
+
 ## Check Functions
 
 ### Equality & Approximation
