@@ -59,6 +59,20 @@ def _format_percent(rel_tol: float) -> str:
     return f"{rel_tol * 100:.10g}"
 
 
+def approx_tolerance(abs_tol: float | None, rel_tol: float | None, units: str | None = None) -> str:
+    """Render the ``± …`` tolerance clause for an approx check (spec §5.1).
+
+    Labels ``(abs)``/``(rel)`` appear only when both tolerances are present.
+    Shared by ``build_approx`` and the ``ChecksFailedError`` message formatter.
+    """
+    u = _units_suffix(units)
+    if abs_tol is not None and rel_tol is not None:
+        return f"± {abs_tol}{u} (abs) ± {_format_percent(rel_tol)}% (rel)"
+    if abs_tol is not None:
+        return f"± {abs_tol}{u}"
+    return f"± {_format_percent(rel_tol)}%"
+
+
 def build_equal(actual: Any, expected: Any, *, name: str, units: str | None = None) -> CheckDescriptor:
     u = _units_suffix(units)
     desc: CheckDescriptor = {
@@ -97,14 +111,7 @@ def build_approx(
     if abs_tol is None and rel_tol is None:
         raise ValueError("approx requires at least one of abs_tol or rel_tol")
     u = _units_suffix(units)
-    # The (abs)/(rel) labels disambiguate only when both tolerances are present;
-    # with a single tolerance the bare "\u00b1 value" is unambiguous (spec \u00a75.1).
-    if abs_tol is not None and rel_tol is not None:
-        tol_str = f"\u00b1 {abs_tol}{u} (abs) \u00b1 {_format_percent(rel_tol)}% (rel)"
-    elif abs_tol is not None:
-        tol_str = f"\u00b1 {abs_tol}{u}"
-    else:
-        tol_str = f"\u00b1 {_format_percent(rel_tol)}%"
+    tol_str = approx_tolerance(abs_tol, rel_tol, units)
     desc: CheckDescriptor = {
         "check_type": "approx",
         "name": name,
