@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-06-20
+
+### Fixed
+
+- `verify.conditional` now matches cases whose keys are passed as the same type as `switch_value` (e.g. `cases={0: ..., 1: ...}`). Case keys are normalized to strings when the descriptor is built, so int and enum keys no longer silently fall through to the `default` branch. Descriptors remain JSON-serializable.
+
 ## [0.2.0] - 2026-06-20
 
 ### Changed

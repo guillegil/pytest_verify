@@ -87,6 +87,60 @@ name, and an `expected … got …` detail:
 | `verify.conditional(switch_value, *, cases, default=None, name)` | Branch-based check |
 | `verify.fail(msg, *, name=None)` | Unconditional failure |
 
+## Usage Examples
+
+Most checks read like their table entry — `verify.equal(status, 200, name="Status")`.
+The ones below take a little more setup.
+
+### `conditional` — pick one branch by a switch value
+
+Only the branch whose key matches `switch_value` is evaluated. Use `default` for the
+no-match case. Keys can be ints, strings, or enums — they are normalized internally, so
+`cases={0: ..., 1: ...}` and `cases={"0": ..., "1": ...}` behave the same.
+
+```python
+def test_output_by_mode(verify):
+    verify.conditional(
+        mode,                       # e.g. 0, 1, or 2
+        name="Output voltage",
+        cases={
+            0: verify.approx(output, 0.0, abs_tol=0.01, name="Standby", units="V"),
+            1: verify.approx(output, 3.3, abs_tol=0.1, name="Active", units="V"),
+            2: verify.approx(output, 5.0, abs_tol=0.1, name="Boost", units="V"),
+        },
+        default=verify.fail(f"Unknown mode: {mode}"),
+    )
+```
+
+### `all_satisfy` — apply one check to every item
+
+The factory is called once per item to build a child check; the parent passes only if
+**all** children pass.
+
+```python
+def test_all_channels(verify):
+    verify.all_satisfy(
+        channel_voltages,                                  # e.g. [3.31, 3.29, 3.30]
+        lambda v: verify.between(v, 3.2, 3.4, name="Channel", units="V"),
+        name="All channels within spec",
+    )
+```
+
+### `is_instance` — type check
+
+```python
+verify.is_instance(response, dict, name="Response is a dict")
+```
+
+### `fail` — force a failure
+
+Useful as the `default` branch of a `conditional`, or to mark an unreachable path.
+`name` defaults to the message.
+
+```python
+verify.fail(f"Unexpected state: {state}")
+```
+
 ## Module-Level API
 
 For building descriptors outside of tests (e.g., in helper functions):

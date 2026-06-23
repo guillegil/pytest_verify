@@ -314,6 +314,14 @@ class TestBuildConditional:
         d = build_conditional(99, cases=cases, name="M")
         assert d["matched_case"] is None
 
+    def test_int_keys_are_normalized_and_match(self):
+        # Natural usage passes the case keys as the same type as switch_value
+        # (ints here). They must be normalized to str so the lookup matches.
+        cases = {0: build_equal(1, 2, name="c0"), 1: build_equal(1, 1, name="c1")}
+        d = build_conditional(1, cases=cases, name="M")
+        assert d["matched_case"] == "1"
+        assert set(d["cases"].keys()) == {"0", "1"}
+
     def test_description(self):
         cases = {"1": build_equal(1, 1, name="case1")}
         d = build_conditional(1, cases=cases, name="M")

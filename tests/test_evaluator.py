@@ -274,6 +274,10 @@ class TestConditionalEval:
         cases = {"1": build_equal(10, 10, name="case1")}
         assert evaluate(build_conditional(99, cases=cases, name="M")) is False
 
+    def test_int_keys_match(self):
+        cases = {0: build_equal(1, 2, name="c0"), 1: build_equal(10, 10, name="c1")}
+        assert evaluate(build_conditional(1, cases=cases, name="M")) is True
+
 
 class TestFailEval:
     def test_always_fails(self):

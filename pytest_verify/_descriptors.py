@@ -324,14 +324,18 @@ def build_conditional(
     default: CheckDescriptor | None = None,
     name: str,
 ) -> CheckDescriptor:
+    # Normalize case keys to str so natural int/enum keys (e.g. {0: ..., 1: ...})
+    # match the str(switch_value) lookup, and so descriptors stay JSON-serializable
+    # (JSON object keys are always strings).
+    normalized_cases = {str(k): v for k, v in cases.items()}
     key = str(switch_value)
-    matched_case: str | None = key if key in cases else None
+    matched_case: str | None = key if key in normalized_cases else None
     desc: CheckDescriptor = {
         "check_type": "conditional",
         "name": name,
         "description": f"Verify '{name}' [mode={switch_value}]",
         "switch_value": switch_value,
-        "cases": cases,
+        "cases": normalized_cases,
         "default": default,
         "matched_case": matched_case,
     }
