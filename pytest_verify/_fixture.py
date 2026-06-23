@@ -15,6 +15,27 @@ from ._verify import Verify
 _verify_key: pytest.StashKey[_FixtureVerify] = pytest.StashKey()
 
 
+def _child_descriptors(descriptor: CheckDescriptor) -> list[CheckDescriptor]:
+    """Return the child descriptors a composite check consumes.
+
+    These are checks the user built (and the fixture auto-recorded) only to nest
+    them inside a ``guard``/``conditional``/``all_satisfy`` parent.
+    """
+    check_type = descriptor.get("check_type")
+    if check_type == "guard":
+        children = [branch["check"] for branch in descriptor.get("branches", [])]
+    elif check_type == "conditional":
+        children = list(descriptor.get("cases", {}).values())
+    elif check_type == "all_satisfy":
+        return list(descriptor.get("child_checks", []))
+    else:
+        return []
+    default = descriptor.get("default")
+    if default is not None:
+        children.append(default)
+    return children
+
+
 class _FixtureVerify(Verify):
     """Fixture-scoped verify that evaluates checks immediately and collects results."""
 
@@ -27,11 +48,27 @@ class _FixtureVerify(Verify):
     # ------------------------------------------------------------------
 
     def _record(self, descriptor: CheckDescriptor) -> CheckDescriptor:
-        """Evaluate, store, stash, and return the descriptor."""
+        """Evaluate, store, stash, and return the descriptor.
+
+        Composite checks (``guard``/``conditional``/``all_satisfy``) consume child
+        descriptors that were already auto-recorded when built via the fixture
+        (they are evaluated as arguments). Discard those children so only the
+        composite is reported — otherwise an unmatched branch would surface as an
+        independent failure even though it was never meant to be evaluated.
+        """
         descriptor["passed"] = _evaluate_single(descriptor)
+        for child in _child_descriptors(descriptor):
+            self._discard(child)
         self._results.append(descriptor)
         self._item.stash.setdefault(check_results_key, []).append(descriptor)
         return descriptor
+
+    def _discard(self, child: CheckDescriptor) -> None:
+        """Remove a previously-recorded child descriptor (by identity)."""
+        self._results = [r for r in self._results if r is not child]
+        stash = self._item.stash.get(check_results_key, None)
+        if stash is not None:
+            stash[:] = [r for r in stash if r is not child]
 
     def equal(self, actual: Any, expected: Any, *, name: str, units: str | None = None) -> CheckDescriptor:
         return self._record(super().equal(actual, expected, name=name, units=units))

@@ -92,6 +92,56 @@ class TestFixtureTeardown:
         result.assert_outcomes(failed=1)
         result.stdout.fnmatch_lines(["*checks failed*", "*Sensor output*below floor*"])
 
+    def test_guard_does_not_evaluate_unmatched_branches(self, pytester):
+        """Only the matched branch counts. An unmatched branch whose check would
+        fail must NOT make the test fail."""
+        pytester.makepyfile("""
+            def test_g(verify):
+                verify.guard(
+                    branches=[
+                        (False, "bad", verify.equal(1, 2, name="bad")),
+                        (True, "good", verify.equal(1, 1, name="good")),
+                    ],
+                    name="G",
+                )
+        """)
+        result = pytester.runpytest()
+        result.assert_outcomes(passed=1)
+
+    def test_conditional_does_not_evaluate_unmatched_cases(self, pytester):
+        pytester.makepyfile("""
+            def test_c(verify):
+                verify.conditional(
+                    1,
+                    cases={
+                        0: verify.equal(1, 2, name="zero"),
+                        1: verify.equal(1, 1, name="one"),
+                    },
+                    name="C",
+                )
+        """)
+        result = pytester.runpytest()
+        result.assert_outcomes(passed=1)
+
+    def test_composite_records_only_parent_not_children(self):
+        """A composite consumes its child descriptors; the children must not
+        remain as independent recorded results."""
+        from pytest_verify._fixture import _FixtureVerify
+
+        class _Item:
+            def __init__(self):
+                self.stash = pytest.Stash()
+
+        fv = _FixtureVerify(_Item())
+        fv.guard(
+            branches=[
+                (False, "bad", fv.equal(1, 2, name="bad")),
+                (True, "good", fv.equal(1, 1, name="good")),
+            ],
+            name="G",
+        )
+        assert [r["check_type"] for r in fv._results] == ["guard"]
+
     def test_no_state_bleed_between_tests(self, pytester):
         pytester.makepyfile("""
             def test_first(verify):
