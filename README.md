@@ -112,6 +112,29 @@ def test_output_by_mode(verify):
     )
 ```
 
+### `guard` — if / elif / else with arbitrary conditions
+
+When the expected check depends on a chain of conditions (not a single switch value),
+list them as ordered `(condition, label, check)` branches. The first branch whose
+condition is true is evaluated; if none match, `default` is used. The label identifies
+the chosen branch in the failure summary.
+
+```python
+def test_sensor_output(verify):
+    verify.guard(
+        branches=[
+            (shutter_closed,      "shutter closed", verify.equal(reading, 0)),
+            (level < floor - 5,   "below floor",    verify.equal(reading, 0)),
+            (not sensor_enabled,  "disabled",       verify.equal(reading, 0)),
+        ],
+        default=verify.approx(reading, expected_dn, abs_tol=2, units="DN"),
+        name="Sensor output",
+    )
+```
+
+A failed guard reports the branch it took, e.g.
+`✗ [0] Sensor output [→ below floor] — expected 0, got 7`.
+
 ### `all_satisfy` — apply one check to every item
 
 The factory is called once per item to build a child check; the parent passes only if

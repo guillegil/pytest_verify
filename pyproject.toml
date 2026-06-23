@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pytest-verify"
-version = "0.2.1"
+version = "0.3.0"
 description = "A pytest plugin providing soft assertions for test verification"
 readme = "README.md"
 license = "MIT"

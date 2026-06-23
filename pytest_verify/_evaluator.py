@@ -98,6 +98,16 @@ def _evaluate_single(descriptor: CheckDescriptor) -> bool:
             return _evaluate_single(default)
         return False
 
+    if check_type == "guard":
+        branches: list[dict] = descriptor.get("branches", [])
+        matched: int | None = descriptor.get("matched_index")
+        if matched is not None:
+            return _evaluate_single(branches[matched]["check"])
+        default = descriptor.get("default")
+        if default is not None:
+            return _evaluate_single(default)
+        return False
+
     if check_type == "fail":
         return False
 

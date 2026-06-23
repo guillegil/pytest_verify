@@ -117,6 +117,19 @@ def _detail(result: CheckDescriptor, passed: bool) -> str:
             return f"[{_mode(switch)} → no match]"
         return f"[{_mode(switch)} → {child.get('name', '')}] — {_detail(child, passed)}"
 
+    if check_type == "guard":
+        branches: list[dict] = result.get("branches", [])
+        matched = result.get("matched_index")
+        if matched is not None:
+            label = branches[matched]["label"]
+            child = branches[matched]["check"]
+        elif result.get("default") is not None:
+            label = "default"
+            child = result["default"]
+        else:
+            return "[→ no match]"
+        return f"[→ {label}] — {_detail(child, passed)}"
+
     if check_type == "fail":
         return f"FAIL: {result.get('msg', '')}"
 
@@ -147,9 +160,9 @@ class ChecksFailedError(AssertionError):
 
         def line(marker: str, idx: int, result: CheckDescriptor, is_passed: bool) -> str:
             name = result.get("name", "")
-            # conditional renders `name [mode=X → child] — …`, attaching its
-            # `[mode…]` clause directly to the name without the `— ` separator.
-            sep = " " if result.get("check_type") == "conditional" else " — "
+            # conditional/guard render `name [… → child] — …`, attaching their
+            # bracket clause directly to the name without the `— ` separator.
+            sep = " " if result.get("check_type") in ("conditional", "guard") else " — "
             return f"  {marker} [{idx}] {name}{sep}{_detail(result, is_passed)}"
 
         lines: list[str] = [f"{len(failed)} of {len(results)} checks failed", ""]

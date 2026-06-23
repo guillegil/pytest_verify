@@ -39,7 +39,17 @@ class CheckDescriptor(TypedDict, total=False):
     cases: dict[str, CheckDescriptor]
     default: CheckDescriptor | None
     matched_case: str | None
+    branches: list[GuardBranch]
+    matched_index: int | None
     msg: str
+
+
+class GuardBranch(TypedDict):
+    """One branch of a ``guard`` check: a condition, its label, and the check to run."""
+
+    condition: bool
+    label: str
+    check: CheckDescriptor
 
 
 # ---------------------------------------------------------------------------
@@ -338,6 +348,35 @@ def build_conditional(
         "cases": normalized_cases,
         "default": default,
         "matched_case": matched_case,
+    }
+    return desc
+
+
+def build_guard(
+    branches: list[tuple[bool, str, CheckDescriptor]],
+    *,
+    default: CheckDescriptor | None = None,
+    name: str,
+) -> CheckDescriptor:
+    """Build a guard descriptor — an ordered if/elif/else chain.
+
+    Each branch is a ``(condition, label, check)`` tuple. The first branch whose
+    condition is truthy is the one evaluated; if none match, ``default`` is used.
+    """
+    normalized = [
+        {"condition": bool(condition), "label": label, "check": check}
+        for condition, label, check in branches
+    ]
+    matched_index: int | None = next(
+        (i for i, b in enumerate(normalized) if b["condition"]), None
+    )
+    desc: CheckDescriptor = {
+        "check_type": "guard",
+        "name": name,
+        "description": f"Verify '{name}' [guarded]",
+        "branches": normalized,
+        "default": default,
+        "matched_index": matched_index,
     }
     return desc
 

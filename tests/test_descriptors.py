@@ -13,6 +13,7 @@ from pytest_verify._descriptors import (
     build_fail,
     build_greater,
     build_greater_equal,
+    build_guard,
     build_is_false,
     build_is_instance,
     build_is_none,
@@ -326,6 +327,38 @@ class TestBuildConditional:
         cases = {"1": build_equal(1, 1, name="case1")}
         d = build_conditional(1, cases=cases, name="M")
         assert d["description"] == "Verify 'M' [mode=1]"
+
+
+class TestBuildGuard:
+    def test_check_type(self):
+        d = build_guard([(True, "a", build_equal(1, 1, name="a"))], name="G")
+        assert d["check_type"] == "guard"
+
+    def test_matched_index_is_first_true(self):
+        d = build_guard(
+            [
+                (False, "a", build_equal(1, 1, name="a")),
+                (True, "b", build_equal(1, 1, name="b")),
+                (True, "c", build_equal(1, 1, name="c")),
+            ],
+            name="G",
+        )
+        assert d["matched_index"] == 1
+
+    def test_matched_index_none_when_all_false(self):
+        d = build_guard([(False, "a", build_equal(1, 1, name="a"))], name="G")
+        assert d["matched_index"] is None
+
+    def test_branches_normalized_to_bool_and_structure(self):
+        d = build_guard([(1, "a", build_equal(1, 1, name="a"))], name="G")
+        branch = d["branches"][0]
+        assert branch["condition"] is True  # truthy normalized to bool
+        assert branch["label"] == "a"
+        assert branch["check"]["check_type"] == "equal"
+
+    def test_description(self):
+        d = build_guard([(True, "a", build_equal(1, 1, name="a"))], name="Sensor")
+        assert d["description"] == "Verify 'Sensor' [guarded]"
 
 
 class TestBuildFail:

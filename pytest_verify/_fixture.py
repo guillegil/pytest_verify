@@ -128,6 +128,15 @@ class _FixtureVerify(Verify):
     ) -> CheckDescriptor:
         return self._record(super().conditional(switch_value, cases=cases, default=default, name=name))
 
+    def guard(
+        self,
+        branches: list[tuple[bool, str, CheckDescriptor]],
+        *,
+        default: CheckDescriptor | None = None,
+        name: str,
+    ) -> CheckDescriptor:
+        return self._record(super().guard(branches, default=default, name=name))
+
     def fail(self, msg: str, *, name: str | None = None) -> CheckDescriptor:
         return self._record(super().fail(msg, name=name))
 

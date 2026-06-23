@@ -78,6 +78,20 @@ class TestFixtureTeardown:
         result.stdout.fnmatch_lines(["*RuntimeError*hard boom*"])
         result.stdout.fnmatch_lines(["*checks failed*", "*SoftBad*"])
 
+    def test_guard_failure_reports_branch_label(self, pytester):
+        """A failing guard reaches teardown as a FAILED outcome whose summary
+        names the branch that was taken."""
+        pytester.makepyfile("""
+            def test_guarded(verify):
+                verify.guard(
+                    branches=[(True, "below floor", verify.equal(7, 0, name="lo"))],
+                    name="Sensor output",
+                )
+        """)
+        result = pytester.runpytest()
+        result.assert_outcomes(failed=1)
+        result.stdout.fnmatch_lines(["*checks failed*", "*Sensor output*below floor*"])
+
     def test_no_state_bleed_between_tests(self, pytester):
         pytester.makepyfile("""
             def test_first(verify):

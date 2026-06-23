@@ -279,6 +279,27 @@ class TestConditional:
         assert evaluate(d) is False
 
 
+class TestGuard:
+    def test_matched_branch(self, verify):
+        d = verify.guard(
+            [(False, "lo", build_equal(1, 2, name="lo")), (True, "hi", build_equal(1, 1, name="hi"))],
+            name="Sensor",
+        )
+        assert d["passed"] is True
+
+    def test_default_fallback(self, verify):
+        d = verify.guard(
+            [(False, "lo", build_equal(1, 2, name="lo"))],
+            default=build_equal(5, 5, name="def"),
+            name="Sensor",
+        )
+        assert d["passed"] is True
+
+    def test_no_match_no_default(self):
+        d = v.guard([(False, "lo", build_equal(1, 1, name="lo"))], name="Sensor")
+        assert evaluate(d) is False
+
+
 class TestFail:
     def test_always_fails(self):
         d = v.fail("intentional failure")

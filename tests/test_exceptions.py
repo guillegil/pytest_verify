@@ -193,3 +193,40 @@ class TestChecksFailedErrorPerTypeDetail:
             passed=False,
         )
         assert self._line(r) == "  ✗ [0] Mode [mode=99 → Fallback] — FAIL: unknown mode"
+
+    def test_guard_matched_branch(self):
+        from pytest_verify._descriptors import build_guard
+
+        r = build_guard(
+            [(False, "below floor", build_equal(1, 2, name="lo")),
+             (True, "in range", build_equal(5, 5, name="hi"))],
+            name="Sensor output",
+        )
+        r["passed"] = True
+        assert self._line(r) == "  ✓ [0] Sensor output [→ in range] — 5 == 5"
+
+    def test_guard_default_branch(self):
+        from pytest_verify._descriptors import build_guard
+
+        r = build_guard(
+            [(False, "below floor", build_equal(1, 2, name="lo"))],
+            default=build_approx(10.2, 10.0, abs_tol=0.5, name="formula", units="ns"),
+            name="Sensor output",
+        )
+        r["passed"] = True
+        assert self._line(r) == "  ✓ [0] Sensor output [→ default] — 10.2ns == 10.0ns ± 0.5ns"
+
+    def test_guard_no_match_no_default(self):
+        from pytest_verify._descriptors import build_guard
+
+        r = build_guard([(False, "below floor", build_equal(1, 2, name="lo"))], name="Sensor output")
+        r["passed"] = False
+        assert self._line(r) == "  ✗ [0] Sensor output [→ no match]"
+
+    def test_guard_matched_index_zero(self):
+        # Index 0 must render (regression guard against `if matched` vs `is not None`).
+        from pytest_verify._descriptors import build_guard
+
+        r = build_guard([(True, "only", build_equal(1, 2, name="x"))], name="Sensor")
+        r["passed"] = False
+        assert self._line(r) == "  ✗ [0] Sensor [→ only] — expected 2, got 1"

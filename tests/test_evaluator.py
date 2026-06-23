@@ -22,6 +22,7 @@ from pytest_verify._descriptors import (
     build_not_equal,
     build_all_satisfy,
     build_conditional,
+    build_guard,
 )
 from pytest_verify._evaluator import evaluate, evaluate_detailed
 
@@ -277,6 +278,35 @@ class TestConditionalEval:
     def test_int_keys_match(self):
         cases = {0: build_equal(1, 2, name="c0"), 1: build_equal(10, 10, name="c1")}
         assert evaluate(build_conditional(1, cases=cases, name="M")) is True
+
+
+class TestGuardEval:
+    def test_first_true_branch_passes(self):
+        d = build_guard(
+            [(False, "a", build_equal(1, 2, name="a")), (True, "b", build_equal(1, 1, name="b"))],
+            name="G",
+        )
+        assert evaluate(d) is True
+
+    def test_first_true_branch_can_fail(self):
+        d = build_guard(
+            [(True, "a", build_equal(1, 2, name="a")), (True, "b", build_equal(1, 1, name="b"))],
+            name="G",
+        )
+        # Earlier True wins even though a later branch would pass.
+        assert evaluate(d) is False
+
+    def test_default_used_when_no_branch_matches(self):
+        d = build_guard(
+            [(False, "a", build_equal(1, 2, name="a"))],
+            default=build_equal(5, 5, name="def"),
+            name="G",
+        )
+        assert evaluate(d) is True
+
+    def test_no_match_no_default_fails(self):
+        d = build_guard([(False, "a", build_equal(1, 1, name="a"))], name="G")
+        assert evaluate(d) is False
 
 
 class TestFailEval:

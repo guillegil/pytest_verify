@@ -13,6 +13,7 @@ from ._descriptors import (
     build_fail,
     build_greater,
     build_greater_equal,
+    build_guard,
     build_is_false,
     build_is_instance,
     build_is_none,
@@ -356,6 +357,30 @@ class Verify:
             A :class:`CheckDescriptor` dict.
         """
         return build_conditional(switch_value, cases=cases, default=default, name=name)
+
+    def guard(
+        self,
+        branches: list[tuple[bool, str, CheckDescriptor]],
+        *,
+        default: CheckDescriptor | None = None,
+        name: str,
+    ) -> CheckDescriptor:
+        """Evaluate an ordered if/elif/else chain of guarded checks.
+
+        Each branch is a ``(condition, label, check)`` tuple. The first branch
+        whose condition is truthy is evaluated; if none match, *default* is used,
+        and if there is no default the check fails. The *label* identifies the
+        branch in the failure summary.
+
+        Args:
+            branches: Ordered ``(condition, label, check)`` tuples.
+            default: Fallback descriptor when no condition is truthy.
+            name: Human-readable label for the check.
+
+        Returns:
+            A :class:`CheckDescriptor` dict.
+        """
+        return build_guard(branches, default=default, name=name)
 
     def fail(self, msg: str, *, name: str | None = None) -> CheckDescriptor:
         """Unconditionally failing check.
